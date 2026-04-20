@@ -1,0 +1,24 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Test / lint artifacts
+.pytest_cache/
+.mypy_cache/
+bandit-report.json
+htmlcov/
+*.cover
+
+# Docker
+*.log

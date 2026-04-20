@@ -1,0 +1,51 @@
+# ─────────────────────────────────────────────────────────────────
+# CI Pipeline – runs on every pull request to dev or main
+# Steps: lint → test → security scan
+# ─────────────────────────────────────────────────────────────────
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python (runs inside the Actions runner, not locally)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest bandit
+
+      # 4. Lint with flake8
+      - name: Lint (flake8)
+        run: flake8 app/ tests/ --max-line-length=120 --count --show-source --statistics
+
+      # 5. Run tests with pytest
+      - name: Test (pytest)
+        run: pytest tests/ -v --tb=short
+
+      # 6. Security scan with bandit
+      - name: Security scan (bandit)
+        run: bandit -r app/ -ll --format json --output bandit-report.json || true && bandit -r app/ -ll
+
+      # 7. Upload bandit report as artifact
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json

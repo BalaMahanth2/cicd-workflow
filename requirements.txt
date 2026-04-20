@@ -1,0 +1,12 @@
+# ── Core ──
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# ── Testing (used in CI, not in production image) ──
+httpx==0.28.1
+pytest==8.3.4
+
+# ── Linting & Security (CI only) ──
+flake8==7.1.1
+bandit==1.8.3

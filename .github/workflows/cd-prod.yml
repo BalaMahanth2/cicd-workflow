@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────
+# CD Pipeline – Production
+# Triggers when code is merged into the `main` branch.
+# Builds the Docker image and (optionally) deploys to prod server.
+# ─────────────────────────────────────────────────────────────────
+name: CD – Deploy to Prod
+
+on:
+  push:
+    branches: [main]
+
+env:
+  IMAGE_NAME: trademark-search-pro
+  IMAGE_TAG: prod-${{ github.sha }}
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build the Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ${{ env.IMAGE_NAME }}:prod-latest
+
+      # Smoke-test: start the container and hit /health
+      - name: Run container and verify health
+        run: |
+          docker run -d --name tsp-prod-test \
+            -p 8000:8000 \
+            -e ENVIRONMENT=production \
+            -e APP_VERSION=${{ env.IMAGE_TAG }} \
+            -e LOG_LEVEL=WARNING \
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+          echo "Waiting for container to start..."
+          sleep 5
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed with status $STATUS"
+            docker logs tsp-prod-test
+            exit 1
+          fi
+          echo "Health check passed (HTTP $STATUS)"
+
+      # Cleanup test container
+      - name: Cleanup
+        if: always()
+        run: docker rm -f tsp-prod-test || true
+
+      # ── Optional: push to a container registry ──
+      # Uncomment and configure when you have a registry set up.
+      #
+      # - name: Log in to Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      #
+      # - name: Push image
+      #   run: |
+      #     docker tag ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ghcr.io/${{ github.repository }}:${{ env.IMAGE_TAG }}
+      #     docker push ghcr.io/${{ github.repository }}:${{ env.IMAGE_TAG }}

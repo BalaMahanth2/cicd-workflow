@@ -1,0 +1,36 @@
+# Trademark Search Pro – Docker Compose
+# Runs both Dev and Prod environments from the same image.
+#
+# Usage:
+#   docker compose up --build            # start both
+#   docker compose up --build app_dev    # start dev only
+#   docker compose up --build app_prod   # start prod only
+
+services:
+  # ── Development Environment ──────────────────────────────────
+  app_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tsp-dev
+    ports:
+      - "5000:8000"            # host 5000 → container 8000
+    environment:
+      - ENVIRONMENT=development
+      - APP_VERSION=0.1.0-dev
+      - LOG_LEVEL=DEBUG
+    restart: unless-stopped
+
+  # ── Production Environment ───────────────────────────────────
+  app_prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tsp-prod
+    ports:
+      - "8000:8000"            # host 8000 → container 8000
+    environment:
+      - ENVIRONMENT=production
+      - APP_VERSION=0.1.0
+      - LOG_LEVEL=WARNING
+    restart: unless-stopped
